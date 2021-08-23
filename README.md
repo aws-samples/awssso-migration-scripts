@@ -1,11 +1,6 @@
-## My Project
+## AWS SSO Migration Scripts
 
-TODO: Fill this README out!
-
-Be sure to:
-
-* Change the title in this README
-* Edit your repository description on GitHub
+This `assets` branch exists only to hold assets referenced in the ReadMe.md file within the primary project.
 
 ## Security
 
