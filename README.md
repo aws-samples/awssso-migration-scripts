@@ -1,21 +1,23 @@
 # How to Migrate your Existing Azure AD SAML Federation to AWS Single Sign-On
 
 ## Introduction
-The [AWS Single Sign-On (AWS SSO)](https://aws.amazon.com/single-sign-on/) service is AWS’s solution for human workforce access into AWS accounts.  AWS SSO is a free, fully-managed service that allows customers to easily and securely use their existing identity store with their AWS accounts via the industry standard protocols (SAML and SCIM) without the need for additional scripting or customization.
-
-![SSO Overview](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-images/01-awssso-overview.png)
- 
-Prior to the launch of AWS Single Sign-On it was common for customers to utilize integration scripts to bridge the gap between Azure AD and AWS (we have previously blogged about [one such solution here](https://aws.amazon.com/blogs/security/how-to-automate-saml-federation-to-multiple-aws-accounts-from-microsoft-azure-active-directory/)), however customers found it cumbersome to maintain the custom scripts and keep them functioning without errors long term.  
-
-Today we will share how customers can migrate their existing integrations users over to using AWS Single Sign-On while maintaining their existing permissions and without causing any interruptions for their workforce.
+In this guide we will share how you can migrate your existing federation between AWS IAM and Azure AD over to using AWS Single Sign-On.  We'll explain how you can complete the migration seamlessly; without causing interruption to your users, and while maintaining your existing set of permissions and assignments.
 
 > **Note:** If you have not previously integrated your existing identity store with AWS Identity and Access Management (without AWS SSO) then you do not need to follow the steps in this guide, and can easily set up federation into AWS Single Sign-On by following [the setup guide in the AWS Single Sign-On documentation](https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-identity-source-idp.html).  
+
+&nbsp;
+
+The [AWS Single Sign-On (AWS SSO)](https://aws.amazon.com/single-sign-on/) service is AWS’s solution for human workforce access into AWS accounts.  AWS SSO is a free, fully-managed service that allows customers to easily and securely use their existing identity store with their AWS accounts via the industry standard protocols (SAML and SCIM) without the need for additional scripting or customization.
+ 
+![SSO Overview](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-assets/01-awssso-overview.png)
+
+Prior to the launch of AWS Single Sign-On it was common for customers to utilize integration scripts to bridge the gap between Azure AD and AWS (we have previously blogged about [one such solution here](https://aws.amazon.com/blogs/security/how-to-automate-saml-federation-to-multiple-aws-accounts-from-microsoft-azure-active-directory/)), however customers found it cumbersome to maintain the custom scripts and keep them functioning without errors long term.  
 
 ## Migration Overview
 This guide will walk you through the process of exporting your current user-role assignments within Azure AD and import these same assignments into AWS Single Sign-on.  This will allow you to seamlessly transition your users across to AWS Single Sign-on while maintaining their existing access within the AWS platform.
 The steps of this guide can be implemented in parallel with your existing federation to AWS IAM.  It is recommended to complete these migration steps and test that user access is working correctly before migrating users over to AWS Single Sign-on and turning off the old federation implementation.
 
-![Migration Phases](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-images/02-migration-steps.png)
+![Migration Phases](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-assets/02-migration-steps.png)
 
 The migration process in this guide consists of three main phases:
 1.	**Migrate your Users** \
@@ -49,11 +51,11 @@ Within your PowerShell window, run the following command:
 ```powershell
 Connect-AzureAD
 ```
-This command will pop open a Microsoft login form.  Login with an Azurte AD user that has administrator access to (or “ownership” of) your existing “Amazon Web Services (AWS)” Enterprise Application within Azure AD
+This command will pop open a Microsoft login form.  Login with an Azure AD user that has administrator access to (or “ownership” of) your existing “Amazon Web Services (AWS)” Enterprise Application within Azure AD
 
 **Pre-authenticate to AWS**
 
-To authenticate programmatically to AWS you will need the AWS Access Key and Secret Key of an IAM User or Role with administrator permissions in your AWS Organization Payer account.  For instructions on how to retrieve your AWS access keys, please refer to [the AWS documentation](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
+To authenticate programmatically to AWS, you will need the AWS Access Key and Secret Key of an IAM User or Role with administrator permissions in your AWS Organization Payer account.  For instructions on how to retrieve your AWS access keys, please refer to [the AWS documentation](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
 
 To load these credentials within your PowerShell environment you can run the following command, passing in the values of your access key and secret access key:
 ```powershell
@@ -73,7 +75,7 @@ Once you have automatic provisioning configured, take a note of all the users an
 
 Adding users to the application will give those users a new “AWS SSO” tile when they log into Microsoft 365.  However, if the user clicks on this tile they will be unable to access AWS as they do not have any permissions assigned yet.
 
-Before moving on, verify that your users and and groups have been created within AWS SSO successfully by navigating to the AWS SSO console.  
+Before moving on, verify that your users and groups have been created within AWS SSO successfully by navigating to the AWS SSO console.  
 
 > **Note:** Provisioning of users and groups into AWS SSO can take up to 40 minutes to complete.  If you don’t see your users and groups appear within the AWS SSO console, then try these [common troubleshooting steps](https://docs.aws.amazon.com/singlesignon/latest/userguide/azure-ad-idp.html#azure-ad-troubleshooting).
 
@@ -85,15 +87,15 @@ AWS Single Sign-on uses “Permission Sets” to represent the IAM Roles that ca
 ## Determine the ID of your Existing Enterprise Application
 The internal identifier of the existing “Amazon Web Services (AWS)” Enterprise Application can be used to reliably identify the existing IAM Roles in your AWS Accounts that have a trust relationship to this application.  This identifier can be obtained from the following steps:
 
-1.	Within Azure AD, navigate to the existing Enterprise Application that you have federated with your AWS Accounts (not the new Enterprize Application you just created for AWS SSO), and then click on “Single sign-on” in the left hand menu
+1.	Within Azure AD, navigate to the existing Enterprise Application that you have federated with your AWS Accounts (not the new Enterprise Application you just created for AWS SSO), and then click on “Single sign-on” in the left-hand menu
 
 2.	Scroll down to the third section “SAML Signing Certificate” and then click “Download” next to “Federation Metadata XML”, and then open this file in your favorite text editor
 
-> ![Azure SSO Configuration](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-images/03-federation-metadata.png)
+> ![Azure SSO Configuration](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-assets/03-federation-metadata.png)
 
 3.	Near the start of this file there is a tag named `EntityDescriptor` which contains an attribute named `ID`.  Copy the value of the ID attribute and save this as we will need this value in a later step
 
-> ![Federation Metadata XML](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-images/04-entity-id.png)
+> ![Federation Metadata XML](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-assets/04-entity-id.png)
 
 ## Determine which IAM Role can be Assumed in each AWS Account
 In order to export the existing IAM Roles from each of your AWS Accounts we need to have a consistently named IAM Role in each AWS account with permission to read IAM Roles within the account.  The export script in the following step will assume this role in each AWS Account when it runs.  
@@ -123,7 +125,7 @@ We are now ready to execute the CloudFormation template from the previous step t
 
 1.	Navigate to “Settings” section of the AWS SSO console and make a note of the “ARN” value shown at the top of the page.  This value will be needed in the following step.
 
-> ![AWS SSO Settings](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-images/05-sso-settings.PNG)
+> ![AWS SSO Settings](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-assets/05-sso-settings.PNG)
 
 2.	Navigate to the CloudFormation service within the AWS Console (make sure you are within your AWS Organization payer account and in the same AWS Region as your AWS SSO instance) and click on “Create Stack”
 3.	Under “Specify template” click on “Upload a template file” and then “Choose file”. Browse to the CloudFormation template generated in the previous step (permission-sets.json) and select it, then click “Next”
@@ -145,11 +147,11 @@ After completing the previous steps, the AWS SSO identity store now contains a r
 Similar to Phase 2 above, we will use a PowerShell script to export the existing assignments into CloudFormation which will allow us to import the assignments into AWS.
 
 ## Determine the ID and Region your AWS SSO Identity Store
-The provided script requires the ID and AWS Region of your newly created AWS SSO instance in order to correctly map the users and groups from Azure AD into AWS SSO.  Use the following steps to obtain these values.
+The provided script requires the ID and AWS Region of your newly created AWS SSO instance in order to correctly map the users and groups from Azure AD to their corresponding identifiers within AWS SSO.  You can obtain these values through the following steps:
 
 1.	Navigate to “Settings” section of the AWS SSO console and make a note of the “ARN” value shown at the top of the page and also the “Identity Store ID” value.  These values will be needed in a following step
 
-> ![AWS SSO Settings](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-images/06-identity-store-id.PNG)
+> ![AWS SSO Settings](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-assets/06-identity-store-id.PNG)
 
 2.	While on the settings page also note down the AWS Region your AWS SSO is deployed within.  Click on the region name in the top bar and take note of the region code (e.g. us-west-2) which will be needed in a following step
 
@@ -158,7 +160,7 @@ The internal AppObjectID identifier of the existing “Amazon Web Services (AWS)
 
 1.	Within Azure AD, navigate to the existing Enterprise Application that you have federated with your AWS Accounts (not the new Enterprise Application you created for AWS SSO), and copy the “Object ID” value. This value will be needed in a following step
  
-> ![Azure AD Object ID](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-images/07-object-id.png)
+> ![Azure AD Object ID](https://raw.githubusercontent.com/aws-samples/awssso-migration-scripts/assets/readme-assets/07-object-id.png)
 
 ## Export Existing Role Assignments
 We are now ready to export a copy of the existing user role assignments from Azure AD.  Within the GitHub repository accompanying this blog there is a PowerShell script called `Export-AADAssignments.ps1` that will do this for you.
